@@ -10,6 +10,7 @@ import ij.*;
 import ij.gui.Roi;
 import ij.plugin.PlugIn;
 import ij.plugin.frame.RoiManager;
+import java.awt.Rectangle;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -20,6 +21,7 @@ import java.util.logging.Logger;
 import mcib3d.geom.Objects3DPopulation;
 import mcib3d.image3d.ImageHandler;
 import java.util.ArrayList;
+import loci.common.Region;
 import loci.common.services.ServiceFactory;
 import loci.formats.meta.IMetadata;
 import loci.formats.services.OMEXMLService;
@@ -100,12 +102,12 @@ public class Vglut2_Weka implements PlugIn {
             // Write headers results for results files
             FileWriter fileResults = new FileWriter(resultsDir + "results.xls", false);
             BufferedWriter outPutResults = new BufferedWriter(fileResults);
-            outPutResults.write("ImageName\tVglut2 Dot index\tDot volume (um3)\tDot with GFP\n");
+            outPutResults.write("ImageName\tRoi\tVglut2 Dot index\tDot volume (um3)\tDot with GFP\n");
             outPutResults.flush();
             
             FileWriter globalFileResults = new FileWriter(resultsDir + "globalResults.xls", false);
             BufferedWriter outPutGlobalResults = new BufferedWriter(globalFileResults);
-            outPutGlobalResults.write("ImageName\tRoi Volume (um3)\tNb total Vglut2 dots\tMean Vol Vglut2\tStd Vol Vglut2\tDensityVglut2 in Roi(nb/um3)\tDensityVglut2 in GFP");
+            outPutGlobalResults.write("ImageName\tRoi\tRoi Volume (um3)\tGFP Volume (um3)\tNb total Vglut2 dots\tMean Vol Vglut2\tStd Vol Vglut2\tDensityVglut2 in Roi(nb/um3)\tDensityVglut2 in GFP");
             outPutGlobalResults.write("\t Nb Vglut2 dots with GFP\t Mean Vol Vglut2 with GFP\t Std Vol Vglut2-GFP\tDensity Vglut2-GFP in Roi\t Density Vglut2-GFP in GFP \n");
             outPutGlobalResults.flush();      
             rm = new RoiManager(false);
@@ -115,8 +117,9 @@ public class Vglut2_Weka implements PlugIn {
             int i = 0;
             for (String f : imageFiles) {
                 String rootName = FilenameUtils.getBaseName(f);
-                if (genes.doPreprocess) preprocessFile(f, rootName);
-                fileList[i] = rootName;
+                String roiName = "";
+                if (genes.doPreprocess) roiName = preprocessFile(f, rootName);
+                fileList[i] = rootName+"_"+roiName;
                 i++;
             }
              
@@ -141,61 +144,71 @@ public class Vglut2_Weka implements PlugIn {
         }
     }
     
-    public void preprocessFile(String f, String rootName) throws Exception {
+    public String preprocessFile(String f, String rootName) throws Exception {
+        String roiName = ""; 
         try {
         // find rois
-                String roiFile = imageDir+rootName+".roi";
+            String roiFile = imageDir+rootName+".roi";
+            if (!new File(roiFile).exists()) {
+                roiFile = imageDir+rootName+".zip";
                 if (!new File(roiFile).exists()) {
-                    roiFile = imageDir+rootName+".zip";
-                    if (!new File(roiFile).exists()) 
-                        IJ.showStatus("No roi file found !");
-                    return;
+                    IJ.showStatus("No roi file found !");
+                    return("");
                 }
-                rm.reset();
-                rm.runCommand("Open", roiFile);
-                for (Roi roi : rm.getRoisAsArray()) {
-                    String roiName = roi.getName();
-                    reader.setId(f);
-                    ImporterOptions options = new ImporterOptions();
-                    options.setColorMode(ImporterOptions.COLOR_MODE_GRAYSCALE);
-                    options.setId(f);
-                    options.setSplitChannels(true);
-
-                    // Open and crop GFP if any
-                    if (channelIndex[0] != 0) {
-                        options.setCBegin(0, channelIndex[0] - 1);
-                        options.setCEnd(0, channelIndex[0] - 1);
-
-                        ImagePlus imgGFP = BF.openImagePlus(options)[0];
-                        genes.setCalibration(imgGFP);
-                        imgGFP.setRoi(roi);
-                        ImagePlus croppedGFP = imgGFP.crop("1-"+imgGFP.getNSlices());
-                        genes.closeImages(imgGFP);            
-                        ImagePlus img = croppedGFP.crop(""+genes.slicemin+"-"+genes.slicemax);
-                        genes.closeImages(croppedGFP);
-                        IJ.saveAs(img, "Tiff", processDir+rootName+"_"+roiName+"-GFP.tif");
-                        genes.closeImages(img);
-                    }
-
-                    // Open vglut image
-                    options.setCBegin(0, channelIndex[1] - 1);
-                    options.setCEnd(0, channelIndex[1] - 1);
-
-                    ImagePlus imgVglut = BF.openImagePlus(options)[0];
-                    genes.setCalibration(imgVglut);
-                    imgVglut.setRoi(roi);
-                    ImagePlus cropped = imgVglut.crop("1-"+imgVglut.getNSlices());
-                    roi.setLocation(0, 0); // update roi to cropped image
-                    rm.setRoi(roi, 0);
-                    rm.runCommand("Save", processDir+rootName+"_"+roiName+".roi");
-                    genes.closeImages(imgVglut);            
-                    ImagePlus img = cropped.crop(""+genes.slicemin+"-"+genes.slicemax);
-                    genes.closeImages(cropped);
-                    IJ.saveAs(img, "Tiff", processDir+rootName+"_"+roiName+".tif");
-                    genes.closeImages(img);
+            }
+            rm.reset();
+            rm.runCommand("Open", roiFile);
+            for (Roi roi : rm.getRoisAsArray()) {
+                roiName = roi.getName();
+                reader.setId(f);
+                ImporterOptions options = new ImporterOptions();
+                options.setColorMode(ImporterOptions.COLOR_MODE_GRAYSCALE);
+                options.setId(f);
+                options.setSplitChannels(true);
+                options.setCrop(true);
+                Region reg = new Region(roi.getBounds().x, roi.getBounds().y, roi.getBounds().width, roi.getBounds().height);
+                options.setCropRegion(0, reg);
+                int Zbegin = (genes.slicemin > reader.getSizeZ()) ? 1 :  genes.slicemin;
+                int Zend = (genes.slicemax > reader.getSizeZ()) ? reader.getSizeZ() :  genes.slicemax;
+                options.setZBegin(0, Zbegin+1);
+                options.setZEnd(0, Zend-1);
+                options.doCrop();
+                // Open and crop GFP if any
+                if (channelIndex[0] != 0) {
+                    options.setCBegin(0, channelIndex[0] - 1);
+                    options.setCEnd(0, channelIndex[0] - 1);
+                    
+                    ImagePlus imgGFP = BF.openImagePlus(options)[0];
+                    genes.setCalibration(imgGFP);
+//                        imgGFP.setRoi(roi);
+//                        ImagePlus croppedGFP = imgGFP.crop("1-"+imgGFP.getNSlices());
+//                        genes.closeImages(imgGFP);            
+//                        ImagePlus img = croppedGFP.crop(""+genes.slicemin+"-"+genes.slicemax);
+//                        genes.closeImages(croppedGFP);
+                    IJ.saveAs(imgGFP, "Tiff", processDir+rootName+"_"+roiName+"-GFP.tif");
+                    genes.closeImages(imgGFP);
                 }
+
+                // Open vglut image
+                options.setCBegin(0, channelIndex[1] - 1);
+                options.setCEnd(0, channelIndex[1] - 1);
+
+                ImagePlus imgVglut = BF.openImagePlus(options)[0];
+                genes.setCalibration(imgVglut);
+//                imgVglut.setRoi(roi);
+//                ImagePlus cropped = imgVglut.crop("1-"+imgVglut.getNSlices());
+                roi.setLocation(0, 0); // update roi to cropped image
+                rm.setRoi(roi, 0);
+                rm.runCommand("Save", processDir+rootName+"_"+roiName+".roi");
+//                genes.closeImages(imgVglut);            
+//                ImagePlus img = cropped.crop(""+genes.slicemin+"-"+genes.slicemax);
+//                genes.closeImages(cropped);
+                IJ.saveAs(imgVglut, "Tiff", processDir+rootName+"_"+roiName+".tif");
+                genes.closeImages(imgVglut);
+            }
         }
         catch (Exception e) { throw e; }
+        return(roiName);
     }
     
     public void goWeka(String[] files, BufferedWriter outRes, BufferedWriter globRes){
@@ -210,7 +223,7 @@ public class Vglut2_Weka implements PlugIn {
                 rm.reset();
                 rm.runCommand("Open", processDir+f+".roi");
                 Roi roi = rm.getRoi(0);
-                
+                String roiName = rm.getName();
                 // Segment GFP channel with Weka
                 ImagePlus resGFP = null;
                 double volGFP = 0;
@@ -257,7 +270,7 @@ public class Vglut2_Weka implements PlugIn {
                 IJ.setAutoThreshold(res, "MaxEntropy dark stack");
                 IJ.run(res, "Convert to Mask", "method=MaxEntropy background=Dark");
                 if (res.isInvertedLut()) IJ.run(res, "Invert LUT", "");
-               IJ.run(res, "Options...", "iterations=1 count=1 black do=Nothing");
+                IJ.run(res, "Options...", "iterations=1 count=1 black do=Nothing");
                 IJ.run(res, "Open", "stack");
                 IJ.run(res, "Watershed", "stack");
                 
@@ -300,8 +313,8 @@ public class Vglut2_Weka implements PlugIn {
                     if (nGFP>0) meanVolGFP /= nGFP;
                     double stdVol = genes.stdArray(vols, meanVol, colocs, false);
                     double stdVolGFP = genes.stdArray(vols, meanVolGFP, colocs, true);
-                    globRes.write(""+f+"\t"+roiVol+"\t"+vols.length+"\t"+meanVol+"\t"+stdVol+"\t"+(vols.length/roiVol)+"\t"+(vols.length)/volGFP);
-                    globRes.write("\t"+nGFP+"\t"+meanVolGFP+"\t"+stdVolGFP+"\t"+(nGFP/roiVol)+"\t"+(nGFP/volGFP)+"\n");
+                    globRes.write(""+f+"\t"+roiName+"\t"+roiVol+"\t"+volGFP+"\t"+vols.length+"\t"+meanVol+"\t"+stdVol+"\t"+(vols.length/roiVol)+"\t"+(vols.length)/volGFP+
+                        "\t"+nGFP+"\t"+meanVolGFP+"\t"+stdVolGFP+"\t"+(nGFP/roiVol)+"\t"+(nGFP/volGFP)+"\n");
                     globRes.flush();
                 
                     // draw objects
