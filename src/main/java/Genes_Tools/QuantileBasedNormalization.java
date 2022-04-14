@@ -33,6 +33,7 @@ import ij.process.ByteProcessor;
 import ij.process.ShortProcessor;
 import java.awt.image.ColorModel;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
 import util.BatchOpener;
@@ -597,11 +598,11 @@ public class QuantileBasedNormalization {
 	}
 
 
-	public void run(String dir, String[] listFiles, String gfp) {
+	public void run(String dir, ArrayList<String> listFiles, String gfp) {
 		FileGroup fg = new FileGroup("foo");
-		for( int i = 0; i < listFiles.length; ++i )
-			fg.add(dir+listFiles[i]+gfp+".tif");
-
+		for( String file : listFiles) {
+                    fg.add(dir+file+gfp+".tif");
+                }
 		int channelToUse = 0;	
 		int numberOfQuantiles = 256;
 		boolean replaceWithRankInstead=false;

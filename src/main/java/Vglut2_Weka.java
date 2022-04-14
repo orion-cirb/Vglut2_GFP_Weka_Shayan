@@ -8,9 +8,9 @@
 import Genes_Tools.Vglut2_Weka_Tools;
 import ij.*;
 import ij.gui.Roi;
+import ij.gui.WaitForUserDialog;
 import ij.plugin.PlugIn;
 import ij.plugin.frame.RoiManager;
-import java.awt.Rectangle;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -113,16 +113,17 @@ public class Vglut2_Weka implements PlugIn {
             rm = new RoiManager(false);
                 
             // Preprocess images
-            String[] fileList = new String[imageFiles.size()];
-            int i = 0;
+            ArrayList<String> fileList = new ArrayList<>();
+            ArrayList<String> roiNames = new ArrayList<>();
             for (String f : imageFiles) {
+                ArrayList<String> roiName = new ArrayList<>();
                 String rootName = FilenameUtils.getBaseName(f);
-                String roiName = "";
                 if (genes.doPreprocess) roiName = preprocessFile(f, rootName);
-                fileList[i] = rootName+"_"+roiName;
-                i++;
+                for (String roi : roiName) {
+                    fileList.add(rootName+"_"+roi);
+                    roiNames.add(roi);
+                }
             }
-             
             // Normalised all images
             if (genes.doPreprocess) {
                 IJ.showStatus("Normalisation starting...");
@@ -134,7 +135,7 @@ public class Vglut2_Weka implements PlugIn {
             
             // do Weka on all files
             IJ.showStatus("Segmentation starting...");
-            if (genes.doWeka) goWeka(fileList, outPutResults, outPutGlobalResults);
+            if (genes.doWeka) goWeka(fileList, roiNames, outPutResults, outPutGlobalResults);
             IJ.showStatus("Finished");
             outPutResults.close();
             outPutGlobalResults.close();
@@ -144,8 +145,8 @@ public class Vglut2_Weka implements PlugIn {
         }
     }
     
-    public String preprocessFile(String f, String rootName) throws Exception {
-        String roiName = ""; 
+    public ArrayList<String> preprocessFile(String f, String rootName) throws Exception {
+        ArrayList<String> roiName = new ArrayList<>(); 
         try {
         // find rois
             String roiFile = imageDir+rootName+".roi";
@@ -153,13 +154,13 @@ public class Vglut2_Weka implements PlugIn {
                 roiFile = imageDir+rootName+".zip";
                 if (!new File(roiFile).exists()) {
                     IJ.showStatus("No roi file found !");
-                    return("");
+                    return(null);
                 }
             }
             rm.reset();
             rm.runCommand("Open", roiFile);
             for (Roi roi : rm.getRoisAsArray()) {
-                roiName = roi.getName();
+                roiName.add(roi.getName());
                 reader.setId(f);
                 ImporterOptions options = new ImporterOptions();
                 options.setColorMode(ImporterOptions.COLOR_MODE_GRAYSCALE);
@@ -180,12 +181,7 @@ public class Vglut2_Weka implements PlugIn {
                     
                     ImagePlus imgGFP = BF.openImagePlus(options)[0];
                     genes.setCalibration(imgGFP);
-//                        imgGFP.setRoi(roi);
-//                        ImagePlus croppedGFP = imgGFP.crop("1-"+imgGFP.getNSlices());
-//                        genes.closeImages(imgGFP);            
-//                        ImagePlus img = croppedGFP.crop(""+genes.slicemin+"-"+genes.slicemax);
-//                        genes.closeImages(croppedGFP);
-                    IJ.saveAs(imgGFP, "Tiff", processDir+rootName+"_"+roiName+"-GFP.tif");
+                    IJ.saveAs(imgGFP, "Tiff", processDir+rootName+"_"+roi.getName()+"-GFP.tif");
                     genes.closeImages(imgGFP);
                 }
 
@@ -195,15 +191,10 @@ public class Vglut2_Weka implements PlugIn {
 
                 ImagePlus imgVglut = BF.openImagePlus(options)[0];
                 genes.setCalibration(imgVglut);
-//                imgVglut.setRoi(roi);
-//                ImagePlus cropped = imgVglut.crop("1-"+imgVglut.getNSlices());
                 roi.setLocation(0, 0); // update roi to cropped image
                 rm.setRoi(roi, 0);
-                rm.runCommand("Save", processDir+rootName+"_"+roiName+".roi");
-//                genes.closeImages(imgVglut);            
-//                ImagePlus img = cropped.crop(""+genes.slicemin+"-"+genes.slicemax);
-//                genes.closeImages(cropped);
-                IJ.saveAs(imgVglut, "Tiff", processDir+rootName+"_"+roiName+".tif");
+                rm.runCommand("Save", processDir+rootName+"_"+roi.getName()+".roi");
+                IJ.saveAs(imgVglut, "Tiff", processDir+rootName+"_"+roi.getName()+".tif");
                 genes.closeImages(imgVglut);
             }
         }
@@ -211,11 +202,13 @@ public class Vglut2_Weka implements PlugIn {
         return(roiName);
     }
     
-    public void goWeka(String[] files, BufferedWriter outRes, BufferedWriter globRes){
+    public void goWeka(ArrayList<String> files, ArrayList<String> roiNames, BufferedWriter outRes, BufferedWriter globRes){
         // do weka on each file
         String model = genes.findWekaModel(imageDir, false);
         String modelGFP = genes.findWekaModel(imageDir, true);
-        
+        IJ.setForegroundColor(255, 255, 255);
+        IJ.setBackgroundColor(0, 0, 0);
+        int r = 0;
         for (String f: files) {
             File file = new File(processDir+f+"-normalized.tif");
             if (file.exists()){
@@ -223,11 +216,13 @@ public class Vglut2_Weka implements PlugIn {
                 rm.reset();
                 rm.runCommand("Open", processDir+f+".roi");
                 Roi roi = rm.getRoi(0);
-                String roiName = rm.getName();
+                String roiName = roiNames.get(r);
+                System.out.println("Processing roi = "+roiName);
+                r++;
                 // Segment GFP channel with Weka
                 ImagePlus resGFP = null;
                 double volGFP = 0;
-                 if (channelIndex[0]!=0){
+                 if (channelIndex[0] != 0){
                     ImagePlus impGFP = IJ.openImage(processDir+f+"-GFP-normalized.tif");
                     WekaSegmentation wekaGFP = new WekaSegmentation(genes.weka3D);    
                     wekaGFP.setTrainingImage(impGFP);
@@ -250,7 +245,7 @@ public class Vglut2_Weka implements PlugIn {
                     Objects3DPopulation gfpPop = genes.getPopFromImage(resGFP);  
                     // remove small objects
                     Objects3DPopulation gfpDots = new Objects3DPopulation(gfpPop.getObjectsWithinVolume(genes.minDotsGFP, genes.maxDotsGFP, true));
-                   
+                    System.out.println(gfpDots.getNbObjects() + " GFP dots found ...");
                     // calculate GFP volume in ROI
                     for ( int o=0; o<gfpDots.getNbObjects(); o++) {
                         Object3D obj = gfpDots.getObject(o);
@@ -261,11 +256,11 @@ public class Vglut2_Weka implements PlugIn {
                 
                 ImagePlus imp = IJ.openImage(processDir+f+"-normalized.tif");
                 WekaSegmentation weka = new WekaSegmentation(genes.weka3D);
-                    
                 weka.setTrainingImage(imp);
                 weka.loadClassifier(model);
                 weka.applyClassifier(false);
                 ImagePlus res = weka.getClassifiedImage();
+                
                 genes.closeImages(imp);
                 IJ.setAutoThreshold(res, "MaxEntropy dark stack");
                 IJ.run(res, "Convert to Mask", "method=MaxEntropy background=Dark");
@@ -283,11 +278,12 @@ public class Vglut2_Weka implements PlugIn {
                 
                 // get dots 3D objects
                 Objects3DPopulation alldots = genes.getPopFromImage(res);     
-                int[] imgsize = {res.getWidth(), res.getHeight(), res.getNSlices()};
+                
                 genes.closeImages(res);
    
                 try{
                     Objects3DPopulation dots = new Objects3DPopulation(alldots.getObjectsWithinVolume(genes.minDots, genes.maxDots, true));
+                    System.out.println(dots.getNbObjects() +" genes dots found ...");
                     alldots = null;
                     double meanVol = 0;
                     double meanVolGFP = 0;
@@ -318,7 +314,8 @@ public class Vglut2_Weka implements PlugIn {
                     globRes.flush();
                 
                     // draw objects
-                    genes.drawPopulation(dots, imgsize, resGFP, resultsDir+f+"-results.tif");
+                    //genes.drawPopulation(dots, imgsize, resGFP, resultsDir+f+"-results.tif");
+                    genes.drawPopulation(dots, resGFP, resultsDir+f+"-results.tif");
                     if (resGFP !=null) genes.closeImages(resGFP);
                     
                 } catch (Exception ex) {

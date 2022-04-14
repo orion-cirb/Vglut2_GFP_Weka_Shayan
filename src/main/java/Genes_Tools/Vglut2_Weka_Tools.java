@@ -273,24 +273,23 @@ public class Vglut2_Weka_Tools {
     }
     
     public void drawPop(Objects3DPopulation pop, ImagePlus gfp) {
-        IJ.run(gfp, "Select All", "");
-        IJ.run(gfp, "Clear", "stack");
-        ImageHandler imh = ImageHandler.wrap(gfp);
+        ImageHandler imh = ImageHandler.wrap(gfp).createSameDimensions();
         pop.draw(imh, 255);
         gfp = imh.getImagePlus();
     }
     
-    public void drawPopulation(Objects3DPopulation pop, int[] imsize, ImagePlus gfp, String name) {
-                ImagePlus red =  IJ.createImage("Vglut2", "8-bit black", imsize[0], imsize[1], 1, imsize[2], 1);
-                ImageHandler imh = ImageHandler.wrap(red);
+    public void drawPopulation(Objects3DPopulation pop, ImagePlus gfp, String name) {
+                //ImagePlus red =  IJ.createImage("Vglut2", "8-bit black", imsize[0], imsize[1], 1, imsize[2], 1);
+                ImageHandler imh = ImageHandler.wrap(gfp).createSameDimensions();
                 pop.draw(imh, 255);
-                red = imh.getImagePlus();
+                //red = imh.getImagePlus();
                 ImagePlus res = null;
-                if (gfp!=null){
-                    ImagePlus[] images = {red, gfp};
+                if (gfp != null){
+                    ImagePlus[] images = {imh.getImagePlus(), gfp};
                     res = RGBStackMerge.mergeChannels(images, false); 
-                } else {
-                    res = red;
+                } 
+                else {
+                    res = imh.getImagePlus();
                 }
                 res.setCalibration(cal);
                IJ.saveAs(res, "Tiff", name);
