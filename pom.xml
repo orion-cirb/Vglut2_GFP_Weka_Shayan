@@ -42,7 +42,14 @@
             <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
             <main-class>Vglut2_GFP</main-class>
 	</properties>
-
+        
+        <scm>
+            <connection>scm:git:git://github.com/orion-cirb/Vglut2_GFP.jar</connection>
+            <developerConnection>scm:git:git@github.com:orion-cirb/Vglut2_GFP.jar</developerConnection>
+            <tag>HEAD</tag>
+            <url>https://github.com/orion-cirb/Vglut2_GFP.jar</url>
+	</scm>
+        
 	<dependencies>
             <dependency>
                 <groupId>net.imagej</groupId>
