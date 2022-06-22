@@ -40,7 +40,7 @@ public class Vglut2_Weka_Tools {
     private Calibration cal = new Calibration();
     public final ImageIcon icon = new ImageIcon(this.getClass().getResource("/Orion_icon.png"));
     
-    public boolean doPreprocess;
+    public boolean doNormalization;
     public boolean doWeka;
     public boolean weka3D;
      /**
@@ -121,8 +121,8 @@ public class Vglut2_Weka_Tools {
         for (int n = 0; n < chNames.length; n++) {
             gd.addChoice(chNames[n], channels, channels[0]);
         }
-        gd.addMessage("Preprocessing (crop+normalisation)", Font.getFont("Monospace"), Color.blue);
-        gd.addCheckbox("Preprocess images", true);
+        gd.addMessage("Preprocessing", Font.getFont("Monospace"), Color.blue);
+        gd.addCheckbox("Normalize images", true);
         gd.addMessage("Slices selection", Font.getFont("Monospace"), Color.black);
         gd.addNumericField("Min slice : ", slicemin, 0);
         gd.addToSameRow();
@@ -149,7 +149,7 @@ public class Vglut2_Weka_Tools {
         }
         if (gd.wasCanceled())
                 chChoices = null;
-        doPreprocess = gd.getNextBoolean();
+        doNormalization = gd.getNextBoolean();
         slicemin = (int) gd.getNextNumber();
         slicemax = (int) gd.getNextNumber();
         doWeka = gd.getNextBoolean();
@@ -216,11 +216,11 @@ public class Vglut2_Weka_Tools {
     }
     
     public double scaleInZ() { return cal.pixelDepth; }
-     public double scaleArea() { return cal.pixelWidth*cal.pixelHeight; }
-    
-     public void setCalibration(ImagePlus imp) {
-         imp.setCalibration(cal);
-     }
+    public double scaleArea() { return cal.pixelWidth*cal.pixelHeight; }
+
+    public void setCalibration(ImagePlus imp) {
+        imp.setCalibration(cal);
+    }
      
     /**
      * Find image calibration
@@ -278,22 +278,31 @@ public class Vglut2_Weka_Tools {
         gfp = imh.getImagePlus();
     }
     
-    public void drawPopulation(Objects3DPopulation pop, ImagePlus gfp, String name) {
-                //ImagePlus red =  IJ.createImage("Vglut2", "8-bit black", imsize[0], imsize[1], 1, imsize[2], 1);
-                ImageHandler imh = ImageHandler.wrap(gfp).createSameDimensions();
-                pop.draw(imh, 255);
-                //red = imh.getImagePlus();
-                ImagePlus res = null;
-                if (gfp != null){
-                    ImagePlus[] images = {imh.getImagePlus(), gfp};
-                    res = RGBStackMerge.mergeChannels(images, false); 
-                } 
-                else {
-                    res = imh.getImagePlus();
-                }
-                res.setCalibration(cal);
-               IJ.saveAs(res, "Tiff", name);
-               closeImages(res);
+    public void drawPopulation(Objects3DPopulation pop, ImagePlus res, ImagePlus resGFP, String name) {
+        ImageHandler imh = ImageHandler.wrap(res).createSameDimensions();
+        pop.draw(imh);
+        ImagePlus img = imh.getImagePlus();
+        
+        ImagePlus imgFinal = null;
+        if (resGFP != null){
+            ImagePlus[] images = {img, resGFP};
+            imgFinal = RGBStackMerge.mergeChannels(images, false); 
+        } else {
+            imgFinal = img;
+        }
+        IJ.run(imgFinal, "3-3-2 RGB", "");
+        imgFinal.setCalibration(cal);
+        IJ.saveAs(imgFinal, "Tiff", name);
+        closeImages(imgFinal);
+    }
+    
+    /**
+     * Reset labels of the objects composing a population
+     */
+    public void resetLabels(Objects3DPopulation pop) {
+        for(int i=0; i < pop.getNbObjects(); i++) {
+            pop.getObject(i).setValue(i+1);
+        }
     }
 
     
