@@ -265,15 +265,12 @@ public class Vglut2_Weka implements PlugIn {
                 weka.loadClassifier(model);
                 weka.applyClassifier(false);
                 ImagePlus res = weka.getClassifiedImage();
-                
                 genes.closeImages(imp);
-                IJ.setAutoThreshold(res, "MaxEntropy dark stack");
-                IJ.run(res, "Convert to Mask", "method=MaxEntropy background=Dark");
+                IJ.setThreshold(res, 1, 255, "raw");
+                IJ.run(res, "Convert to Mask", "method=Default background=Dark");
                 if (res.isInvertedLut()) IJ.run(res, "Invert LUT", "");
-                IJ.run(res, "Options...", "iterations=1 count=1 black do=Nothing");
-                IJ.run(res, "Open", "stack");
                 IJ.run(res, "Watershed", "stack");
-                
+                IJ.setBackgroundColor(0, 0, 0);
                 // Keep only dots inside Roi
                 res.setRoi(roi);
                 IJ.run(res, "Clear Outside", "stack");
