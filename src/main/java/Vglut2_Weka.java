@@ -241,6 +241,7 @@ public class Vglut2_Weka implements PlugIn {
                     IJ.run(resGFP, "Options...", "iterations=1 count=1 black do=Nothing");
                     IJ.run(resGFP, "Close-", "stack");
                     IJ.run(resGFP, "Open", "stack");
+                    // free memory
                     wekaGFP = null;
                     
                     // Keep only dots inside Roi
