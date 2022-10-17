@@ -33,7 +33,7 @@ import org.apache.commons.io.FilenameUtils;
 import trainableSegmentation.WekaSegmentation;
 
 
-public class Vglut2_Weka implements PlugIn {
+public class Vglut2_Weka_Shayan implements PlugIn {
 
     private final boolean canceled = false;
     private String imageDir = "";
@@ -141,7 +141,7 @@ public class Vglut2_Weka implements PlugIn {
             outPutGlobalResults.close();
            
            } catch (Exception ex) {
-            Logger.getLogger(Vglut2_Weka.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Vglut2_Weka_Shayan.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     
@@ -329,7 +329,7 @@ public class Vglut2_Weka implements PlugIn {
                     if (resGFP != null) genes.closeImages(resGFP);
                     
                 } catch (Exception ex) {
-                    Logger.getLogger(Vglut2_Weka.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(Vglut2_Weka_Shayan.class.getName()).log(Level.SEVERE, null, ex);
                 }
                
                 

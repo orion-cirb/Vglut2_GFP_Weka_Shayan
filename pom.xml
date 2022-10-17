@@ -6,10 +6,10 @@
 	<modelVersion>4.0.0</modelVersion>
         
 	<groupId>cirb</groupId>
-	<artifactId>Vglut2_GFP</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
+	<artifactId>Vglut2_GFP_Weka_Shayan</artifactId>
+	<version>1.0.0</version>
         <packaging>jar</packaging>
-	<name>plugins/CIRB/Vglut2_GFP.jar</name>
+	<name>plugins/CIRB/Vglut2_GFP_Weka_Shayan.jar</name>
 	<description>Find vglut2 dots on GFP fibers
         </description>
 
@@ -40,7 +40,7 @@
         <properties>
             <imagej.app.directory>/opt/Fiji.app/</imagej.app.directory>
             <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-            <main-class>Vglut2_GFP</main-class>
+            <main-class>Vglut2_Weka_Shayan</main-class>
 	</properties>
         
         <scm>
