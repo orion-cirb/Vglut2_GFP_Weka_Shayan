@@ -24,9 +24,7 @@ With each image should be provided a *.roi* or *.zip* file containing one or mul
 
 * Detect Vglut2 dots with Weka + watershed
 
-* If GFP channel provided, detect GFP signal with Weka
-
-* Colocalize Vglut2 dots with the GFP signal
+* If GFP channel provided, detect GFP signal with Weka + colocalize it with Vglut2 dots
 
 
 ### Dependencies
