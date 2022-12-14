@@ -12,25 +12,31 @@
 
 3D images taken with a x60 objective
 
-*CSU_642* channel: Vglut2
+2 channels:
+  1. *CSU_488:* GFP (not mandatory)
+  2. *CSU_488:* Vglut2
+
+With each image should be provided a *.roi* or *.zip* file containing one or multiple ROI(s).
 
 ### Plugin description
 
-* Detect Vglut2 dots with Weka
+* If required, normalize images with quantile-based normalization
 
-* If GFP channel is provided, detect GFP fibers
+* Detect Vglut2 dots with Weka + watershed
 
-Débugger l'enregistrement des résultats avec/sans canal GFP et avec/sans normalisation des images
+* If GFP channel provided, detect GFP signal with Weka
 
+* Colocalize Vglut2 dots with the GFP signal
 
 
 ### Dependencies
 
 * **3DImageSuite** Fiji plugin
 
-**CLIJ** Fiji plugin
+* **Weka pixel classifier** model named *classifier.model*
 
-* **StarDist** conda environment + StandardFluo.zip and pmls2.zip (homemade) models
+* If GFP channel provided, **Weka pixel classifier** model named *classifier-GFP.model*
+ 
 
 ### Version history
 
