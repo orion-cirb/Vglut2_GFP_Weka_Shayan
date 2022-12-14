@@ -13,8 +13,8 @@
 3D images taken with a x60 objective
 
 2 channels:
-  1. *CSU_488:* GFP (not mandatory)
-  2. *CSU_488:* Vglut2
+  1. *CSU_488:* GFP fibers (not mandatory)
+  2. *CSU_488:* Vglut2 dots
 
 With each image should be provided a *.roi* or *.zip* file containing one or multiple ROI(s).
 
@@ -24,7 +24,7 @@ With each image should be provided a *.roi* or *.zip* file containing one or mul
 
 * Detect Vglut2 dots with Weka + watershed
 
-* If GFP channel provided, detect GFP signal with Weka + colocalize it with Vglut2 dots
+* If GFP channel provided, detect GFP fibers with Weka + colocalize them with Vglut2 dots
 
 
 ### Dependencies
